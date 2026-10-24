@@ -541,7 +541,9 @@ def paper_flags(p):
 def scan(text, paper_mode=False):
     lang = detect_lang(text)
     raw = text
-    is_tex = bool(re.search(r"\\begin\{|\\section", raw))
+    is_tex = bool(re.search(
+        r"(?m)^\s*\\(?:documentclass|begin|end|section|subsection|title|"
+        r"cite|citep|ref|label|newcommand)\b", raw))
     body = strip_comments(strip_preamble(raw)) if is_tex else raw
     body = strip_floats(body) if is_tex else body
     cleaned = clean_tex(body) if lang == "en" else body
@@ -570,8 +572,12 @@ def scan(text, paper_mode=False):
     long_cut = 80 if lang == "zh" else 35
 
     pcounts = {name: sum(cleaned.count(c) for c in cs) for name, cs in PUNCT_GROUPS.items()}
-    # Spaced hyphens (" - ") and LaTeX "--" are em-dash substitutes.
-    pcounts["破折号"] += len(re.findall(r"\s--\s|\s-\s", cleaned))
+    # Spaced hyphens (" - ") and LaTeX "--" are em-dash substitutes. Markdown
+    # list bullets and table rules use the same glyph for structure, so they
+    # are removed first; otherwise every "- item" reads as a dash.
+    prose_punct = re.sub(r"(?m)^\s*\|[\s:|-]+\|\s*$", " ", cleaned)
+    prose_punct = re.sub(r"(?m)^\s*[-*+]\s", " ", prose_punct)
+    pcounts["破折号"] += len(re.findall(r"\s--\s|\s-\s", prose_punct))
     if is_tex:
         pcounts["破折号"] += len(re.findall(r"---|(?<=\w)--(?=\w)", cleaned))
     ptotal = sum(pcounts.values())
@@ -618,7 +624,8 @@ def scan(text, paper_mode=False):
     p_cv = (statistics.pstdev(para_lens) / statistics.fmean(para_lens)) \
         if len(para_lens) > 1 and statistics.fmean(para_lens) else 0.0
 
-    paper_on = bool(paper_mode) or (lang == "en" and bool(re.search(r"\\section|(?m)^##\s", text)))
+    paper_on = bool(paper_mode) or (
+        lang == "en" and bool(re.search(r"(?m)^#{1,6}\s|\\section", text)))
     cv_hi, cv_mid = (0.20, 0.26) if paper_on else (0.30, 0.40)
 
     flags = []
@@ -685,7 +692,7 @@ def scan(text, paper_mode=False):
         "extra": extra,
     }
 
-    if paper_mode or (lang == "en" and re.search(r"\\section|(?m)^##\s", text)):
+    if paper_on:
         p = paper_metrics(raw, cleaned)
         result["paper"] = p
         flags.extend(paper_flags(p))

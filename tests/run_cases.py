@@ -124,23 +124,47 @@ optimal clustering. The bound is a fixed-pair diagnostic rather than a guarantee
 for the full procedure. We therefore check clustering stability empirically.
 """
 
-# (name, text, predicate, expectation)
+# Markdown structure (table rules, list bullets) reuses the dash glyph.
+# Reading it as prose punctuation inflates the em-dash rate by an order of
+# magnitude, and a doc that merely quotes a \section was misread as LaTeX.
+MD_TABLE = """# Title
+
+| metric | value |
+|---|---|
+| dashes | 0 |
+
+- first item
+- second item
+- third item
+
+A prose sentence follows. It mentions \\section{Method} inside a code span.
+"""
+
+# (name, text, paper_mode, predicate, expectation)
 INVARIANTS = [
-    ("tex-nested-heading", NESTED_HEAD,
+    ("tex-nested-heading", NESTED_HEAD, True,
      lambda r: "method" in r["paper"]["sections"],
      "section title containing \\method{} must still be counted"),
-    ("tex-comment-rule", COMMENT_RULE,
+    ("tex-comment-rule", COMMENT_RULE, True,
      lambda r: r["punctuation"]["em_dash_per_k"] == 0.0,
      "%----- comment rules must not count as em dashes"),
-    ("tex-table-digits", TABLE_DIGITS,
+    ("tex-table-digits", TABLE_DIGITS, True,
      lambda r: r["paper"]["numbers"] == 0,
      "digits inside tabular must not count as prose evidence"),
-    ("tex-theorem-claim", THEOREM_CLAIM,
+    ("tex-theorem-claim", THEOREM_CLAIM, True,
      lambda r: not any(f["level"] == "高" for f in r["flags"]),
      "prove next to a lemma/theorem must not raise a high flag"),
-    ("tex-noun-guarantee", NOUN_GUARANTEE,
+    ("tex-noun-guarantee", NOUN_GUARANTEE, True,
      lambda r: not any(f["level"] == "高" for f in r["flags"]),
      "'not a guarantee of' is a limitation, not an over-claim"),
+    ("md-structure-dashes", MD_TABLE, False,
+     lambda r: r["punctuation"]["em_dash_per_k"] == 0.0,
+     "table rules and list bullets must not count as em dashes"),
+    # English prose without --paper used to raise PatternError: a "(?m)" inserted
+    # mid-pattern is a compile-time error, so the branch never ran clean.
+    ("en-plain-no-crash", "The scanner reports three counts. It writes nothing to disk.", False,
+     lambda r: r["sentence_len"]["mean"] > 0 and "paper" not in r,
+     "English prose without --paper must scan without switching to paper mode"),
 ]
 
 
@@ -173,8 +197,8 @@ def main():
                 print(f"        [{f['level']}] {f['finding']}")
             failures.append(name)
 
-    for name, text, predicate, expectation in INVARIANTS:
-        r = run(text, True)
+    for name, text, paper, predicate, expectation in INVARIANTS:
+        r = run(text, paper)
         ok = predicate(r)
         print(f"[{'PASS' if ok else 'FAIL'}] {name}"
               + ("" if ok else f"\n        expected: {expectation}"))

@@ -3,7 +3,7 @@ name: prose-calibration
 description: "Diagnose and rewrite machine-sounding English academic prose, section by section, along four axes: information density, stance calibration, template form, and claim-to-evidence traceability. Targets the failure modes that get ML/DL papers rejected on writing: adjective inflation without numbers, empty claims such as 'extensive experiments demonstrate effectiveness', misuse of 'significantly' and 'prove' without statistical support, gaps asserted instead of cited, and contributions that describe activities rather than findings. Also handles Chinese technical documents, SOPs, and reports. Use when revising an abstract, introduction, contributions list, method section, experiments section, related work, conclusion, or rebuttal; when a draft reads like ChatGPT/GPT output, feels padded, evasive, over-cautious, or uniformly rhythmical; or when a reviewer says the writing is vague. Enforces a no-fabrication guardrail: a style pass must be paired with at least one specificity or scope correction, and every surviving claim must be anchored to a table, figure, or section."
 description_zh: "文风校准（论文优先）：英文论文分节改写，四轴诊断、claim 锚点核查、禁止洗稿"
 description_en: "Section-aware calibration of English academic prose: strip AI tells and defensive hedging, force numbers and claim anchors"
-version: 2.1.0
+version: 2.1.1
 allowed-tools:
   - Read
   - Write
